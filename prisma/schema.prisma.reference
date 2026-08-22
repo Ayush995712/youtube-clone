@@ -1,0 +1,90 @@
+// This is a RECONSTRUCTION based on the fields/relations your original
+// server.ts actually queries — not your real schema. Replace this file
+// with your own prisma/schema.prisma. Keeping this here only as a
+// reference in case it's useful for a diff.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(cuid())
+  username         String   @unique
+  password         String
+  gender           String
+  channelName      String   @unique
+  profilePicture   String?
+  subscriberCount  Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  uploads       Upload[]
+  likes         Like[]
+  comments      Comment[]
+
+  // subscriptions this user has made to other channels
+  subscribedTo    Subscription[] @relation("Subscriber")
+  // subscriptions other users made to this user's channel
+  subscribers     Subscription[] @relation("Channel")
+}
+
+model Upload {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  videoUrl    String
+  thumbnail   String
+  views       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  likes    Like[]
+  comments Comment[]
+}
+
+model Like {
+  id       String @id @default(cuid())
+  userId   String
+  uploadId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  upload Upload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, uploadId])
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  comment   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId   String
+  uploadId String
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  upload Upload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+}
+
+model Subscription {
+  id            String   @id @default(cuid())
+  createdAt     DateTime @default(now())
+
+  // the channel being subscribed to
+  userId        String
+  user          User @relation("Channel", fields: [userId], references: [id], onDelete: Cascade)
+
+  // the user doing the subscribing
+  subscriberId  String
+  subscriber    User @relation("Subscriber", fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, subscriberId])
+}
